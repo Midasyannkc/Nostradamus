@@ -7,3 +7,4 @@ START = "2025-01"            # first simulated month
 MONTHS = 20                  # 12 history months for training, 8 live months streamed
 TRAIN_MONTHS = 12
 ALLOWED_LATENESS_DAYS = 45
+COOLDOWN_DAYS = 60            # no repeat alert for a borrower inside this window unless days past due rises 30 or more

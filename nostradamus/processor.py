@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from . import contracts
-from .config import ALLOWED_LATENESS_DAYS
+from .config import ALLOWED_LATENESS_DAYS, COOLDOWN_DAYS
 from .lake import AuditFailed
 from .model import month_end_ts
 from .state import FEATURES, features, month_of
@@ -24,6 +24,7 @@ class Processor:
         self.seen = {}
         self.stats = {"batches": 0, "events": 0, "published": 0, "duplicates": 0, "dead_letter": {}, "batch_ms": []}
         self.alarms = set()
+        self.last_alert = {}
 
     def run_batch(self) -> int:
         recs = self.consumer.poll()
@@ -107,7 +108,10 @@ class Processor:
         for i, b in enumerate(keys):
             if X[i][0] >= 60:
                 self.baseline.append({"borrower_id": b, "as_of_month": M, "alert_time": when})
-            if score[i] >= self.model.threshold:
+            prev = self.last_alert.get(b)
+            quiet = prev is not None and (when - prev[0]).days < COOLDOWN_DAYS and X[i][0] < prev[1] + 30
+            if score[i] >= self.model.threshold and not quiet:
+                self.last_alert[b] = (when, X[i][0])
                 a = {"alert_id": uuid.uuid4().hex[:12], "borrower_id": b, "as_of_month": M, "alert_time": when,
                      "score": float(score[i]), "reasons": self.model.reasons(X[i]), "model_version": self.model.version}
                 self.alerts.append(a)
