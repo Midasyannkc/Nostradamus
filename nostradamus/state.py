@@ -15,7 +15,7 @@ def month_of(ts: str) -> int:
 class State:
     def __init__(self):
         self.b = defaultdict(lambda: {"pay": {}, "od": {}, "cr": {}, "alt": {}, "nos": None, "nod": None, "sale": None,
-                                      "last": -1})
+                                      "last": -1, "t": {}})
 
     def apply(self, e: dict):
         st = self.b[e["borrower_id"]]
@@ -23,6 +23,11 @@ class State:
         p = e["payload"]
         k = e["event_type"]
         st["last"] = max(st["last"], m)
+        if k in ("payment", "credit_snapshot", "alt_signal"):
+            # the newest event by event time wins, whatever order the events arrive in
+            if e["event_time"] < st["t"].get((k, m), ""):
+                return
+            st["t"][(k, m)] = e["event_time"]
         if k == "payment":
             st["pay"][m] = (p.get("days_past_due", 0), 1 if p.get("amount_paid", 0) == 0 else 0)
         elif k == "overdraft":
