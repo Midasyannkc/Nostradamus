@@ -19,7 +19,7 @@ class AlwaysHigh:
 def _run(tmp_path, dpds):
     _, _, prod, proc = harness(str(tmp_path), model=AlwaysHigh())
     events = [pay(f"E{i}", f"2025-{i + 1:02d}-10T10:00:00+00:00", dpd=d) for i, d in enumerate(dpds)]
-    events.append(pay("Z", "2025-%02d-20T10:00:00+00:00" % (len(dpds) + 2)))   # advances the watermark past the last month
+    events.append(pay("Z", "2025-%02d-20T10:00:00+00:00" % (len(dpds) + 1)))   # advances the watermark past the last month
     send(prod, events)
     drain(proc)
     return proc

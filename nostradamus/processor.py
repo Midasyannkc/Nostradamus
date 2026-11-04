@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from . import contracts
-from .config import ALLOWED_LATENESS_DAYS, COOLDOWN_DAYS
+from .config import ALLOWED_LATENESS_DAYS, COOLDOWN_DAYS, MAX_FORWARD_JUMP_DAYS
 from .lake import AuditFailed
 from .model import month_end_ts
 from .state import FEATURES, features, month_of
@@ -44,6 +44,10 @@ class Processor:
                 self.stats["duplicates"] += 1
                 continue
             ts = datetime.fromisoformat(e["event_time"])
+            if self.max_t is not None and ts > self.max_t + timedelta(days=MAX_FORWARD_JUMP_DAYS):
+                dlq.append({"raw": json.dumps(e, default=str), "reason": "event_time_in_future"})
+                self._count_dead("event_time_in_future")
+                continue
             if self.max_t is None or ts > self.max_t:
                 self.max_t = ts
             if ts < self.max_t - timedelta(days=ALLOWED_LATENESS_DAYS):

@@ -8,3 +8,4 @@ MONTHS = 20                  # 12 history months for training, 8 live months str
 TRAIN_MONTHS = 12
 ALLOWED_LATENESS_DAYS = 45
 COOLDOWN_DAYS = 60            # no repeat alert for a borrower inside this window unless days past due rises 30 or more
+MAX_FORWARD_JUMP_DAYS = 62     # a jump of two months or more ahead of the watermark is not a plausible gap in a live feed: quarantine
