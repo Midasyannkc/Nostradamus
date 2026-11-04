@@ -1,0 +1,74 @@
+[
+ {
+  "n": 1,
+  "title": "A redelivered overdraft was counted twice",
+  "found": "duplicate test after at-least-once redelivery",
+  "detail": "The log delivers at least once, so a consumer restart redelivers events. State and the lake both counted the second copy. The processor now remembers processed event ids and drops repeats, counting them for the report."
+ },
+ {
+  "n": 2,
+  "title": "A late older payment overwrote a newer one",
+  "found": "out-of-order replay test",
+  "detail": "Within a month the processor kept whichever payment, credit or alt-data event arrived last. A late older event replaced newer days past due. State now keeps the event with the newest event time."
+ },
+ {
+  "n": 3,
+  "title": "Offsets were committed before processing, so a crash lost events",
+  "found": "crash-between-poll-and-process test",
+  "detail": "The consumer committed its offset on poll. A crash after the poll and before processing skipped those events forever. Offsets are now committed only after the batch is published and applied."
+ },
+ {
+  "n": 4,
+  "title": "A renamed field loaded as zero and a null borrower created a ghost borrower",
+  "found": "upstream drift in the simulator",
+  "detail": "The upstream servicer renamed days_past_due to dpd with no version bump, which loaded as zero days late, and events without a borrower id created a ghost borrower. Every event is validated against a contract, violations go to a dead-letter table, a drift alarm fires, and confirmed aliases can be replayed."
+ },
+ {
+  "n": 5,
+  "title": "A retried batch was stored twice",
+  "found": "retry test on the Iceberg writer",
+  "detail": "A batch that failed after writing was written again on retry. Each batch is now staged in its own table, audited, then published once, keyed by a batch id stored as a snapshot property."
+ },
+ {
+  "n": 6,
+  "title": "Features for an earlier month changed when later months arrived",
+  "found": "point-in-time leakage test",
+  "detail": "Training features read the latest state, so the future leaked into the past. Features are now built only from months up to the as-of month."
+ },
+ {
+  "n": 7,
+  "title": "A very late event changed state without reaching the lake",
+  "found": "late-event and failed-audit test",
+  "detail": "Events beyond the allowed lateness still changed in-memory state, and a failed audit still changed state. They are parked in the dead-letter table and state is applied only after the lake publish."
+ },
+ {
+  "n": 8,
+  "title": "A borrower above the threshold was alerted every month",
+  "found": "alert volume check",
+  "detail": "The same high-risk borrower was re-alerted each month, flooding the outreach queue. Repeat alerts are suppressed for 60 days unless days past due rises by 30 or more."
+ },
+ {
+  "n": 9,
+  "title": "The model used a ZIP-level area risk feature, a geographic proxy",
+  "found": "fairness review",
+  "detail": "Area risk by ZIP can act as a proxy for redlining. The feature was removed and a test now fails if any geographic feature returns. Scores use only borrower finances and loan terms."
+ },
+ {
+  "n": 10,
+  "title": "A future-dated event pushed the watermark and every later event was dropped as late",
+  "found": "junk timestamp test",
+  "detail": "One bad timestamp moved the watermark far ahead, so real events looked late. Events more than 62 days ahead of the watermark are quarantined."
+ },
+ {
+  "n": 11,
+  "title": "Training labeled unfinished windows as negatives",
+  "found": "label maturity check",
+  "detail": "Borrower-months whose 180 day window had not closed were counted as non-foreclosures, which biased the model. Training uses matured windows only, and the alert threshold is set without labels from the top 1.5 percent of the latest month."
+ },
+ {
+  "n": 12,
+  "title": "SQL months shifted with the session time zone",
+  "found": "warehouse reconciliation against the processor",
+  "detail": "The dbt overdraft model cast event time in the session time zone, America/Chicago, so events near month boundaries landed in a different month than the processor's UTC buckets. 646 of 22,442 borrower-months disagreed. Months are now bucketed in UTC and the reconciliation shows zero mismatches."
+ }
+]
