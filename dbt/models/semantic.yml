@@ -1,0 +1,88 @@
+version: 2
+
+models:
+  - name: metricflow_time_spine_daily
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        granularity: day
+
+semantic_models:
+  - name: alert_outcomes
+    description: One row per alerted borrower with the first alert, the horizon outcome and the lead time.
+    model: ref('fct_alert_outcomes')
+    defaults:
+      agg_time_dimension: alert_date
+    entities:
+      - name: borrower
+        type: primary
+        expr: borrower_id
+    dimensions:
+      - name: alert_date
+        type: time
+        type_params:
+          time_granularity: day
+      - name: city
+        type: categorical
+      - name: focus
+        type: categorical
+    measures:
+      - name: alerted_borrowers
+        description: Borrowers who received a first alert.
+        agg: count
+        expr: borrower_id
+      - name: matured_alerted_borrowers
+        description: Alerted borrowers whose full horizon window has closed.
+        agg: sum
+        expr: case when matured then 1 else 0 end
+      - name: hit_borrowers
+        description: Matured alerted borrowers who reached a notice of sale inside the horizon.
+        agg: sum
+        expr: case when matured and hit then 1 else 0 end
+      - name: flagged_before_notice_borrowers
+        description: Alerted borrowers flagged before their notice of sale.
+        agg: sum
+        expr: case when flagged_before_notice then 1 else 0 end
+      - name: lead_days_total
+        agg: sum
+        expr: coalesce(lead_days, 0)
+
+metrics:
+  - name: alerted_borrowers
+    label: Alerted borrowers
+    type: simple
+    type_params:
+      measure: alerted_borrowers
+  - name: matured_alerted_borrowers
+    label: Matured alerted borrowers
+    type: simple
+    type_params:
+      measure: matured_alerted_borrowers
+  - name: hit_borrowers
+    label: Hit borrowers
+    type: simple
+    type_params:
+      measure: hit_borrowers
+  - name: alert_precision
+    label: Alert precision (matured window)
+    description: Share of matured alerts followed by a notice of sale inside the horizon.
+    type: ratio
+    type_params:
+      numerator: hit_borrowers
+      denominator: matured_alerted_borrowers
+  - name: mean_lead_days
+    label: Mean lead time in days
+    description: Average days between the first alert and the notice of sale, over flagged borrowers.
+    type: ratio
+    type_params:
+      numerator: lead_days_total
+      denominator: flagged_before_notice_borrowers
+  - name: lead_days_total
+    type: simple
+    type_params:
+      measure: lead_days_total
+  - name: flagged_before_notice_borrowers
+    type: simple
+    type_params:
+      measure: flagged_before_notice_borrowers
