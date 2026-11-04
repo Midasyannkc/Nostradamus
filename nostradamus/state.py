@@ -14,6 +14,7 @@ def month_of(ts: str) -> int:
 
 class State:
     def __init__(self):
+        self.latest = ""            # newest event time applied so far: the edge of what the data can label
         self.b = defaultdict(lambda: {"pay": {}, "od": {}, "cr": {}, "alt": {}, "nos": None, "nod": None, "sale": None,
                                       "last": -1, "t": {}})
 
@@ -23,6 +24,7 @@ class State:
         p = e["payload"]
         k = e["event_type"]
         st["last"] = max(st["last"], m)
+        self.latest = max(self.latest, e["event_time"])
         if k in ("payment", "credit_snapshot", "alt_signal"):
             # the newest event by event time wins, whatever order the events arrive in
             if e["event_time"] < st["t"].get((k, m), ""):

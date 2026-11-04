@@ -19,14 +19,20 @@ def month_end_ts(M: int):
     return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
 
 
-def build_training(state, statics: dict, months: range):
+def build_training(state, statics: dict, months: range, labeled_only: bool = True):
+    """Borrower-month rows. By default only rows whose whole label window (HORIZON_DAYS) fits inside the data seen so far:
+    a notice of sale that has not happened yet is not a negative label, it is an unknown one."""
+    from datetime import datetime, timedelta
     X, y, meta = [], [], []
+    edge = datetime.fromisoformat(state.latest) if state.latest else None
     for b, st in state.b.items():
         if b not in statics:
             continue
         nos = None if st["nos"] is None else __import__("datetime").datetime.fromisoformat(st["nos"])
         for M in months:
             end = month_end_ts(M)
+            if labeled_only and (edge is None or end + timedelta(days=HORIZON_DAYS) > edge):
+                continue
             if nos is not None and nos <= end:
                 continue
             if M not in st["pay"]:

@@ -39,10 +39,10 @@ def run(out: str, seed: int = 11, n: int = 10000, concurrent: bool = True, drift
     proc = Processor(Consumer(log, "events", "nostradamus"), state, statics, lake)
     while proc.run_batch():
         pass
-    X, y, meta = M.build_training(state, statics, range(0, TRAIN_MONTHS - 3))
-    Xv, yv, _ = M.build_training(state, statics, range(TRAIN_MONTHS - 3, TRAIN_MONTHS))
+    X, y, meta = M.build_training(state, statics, range(0, TRAIN_MONTHS))   # only rows with a closed label window
+    Xv, _, _ = M.build_training(state, statics, range(TRAIN_MONTHS - 1, TRAIN_MONTHS), labeled_only=False)
     model = M.Model().fit(X, y)
-    model.threshold = float(np.quantile(model.predict(Xv), .985))
+    model.threshold = float(np.quantile(model.predict(Xv), .985))   # label free: top 1.5 percent of the latest month
     proc.model = model
     proc.alerts_out = Producer(log)
 
