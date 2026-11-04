@@ -1,0 +1,8 @@
+{
+ "source": "Texas Property Code section 51.002, as read at https://texas.public.law/statutes/tex.%20prop.%20code%20section%2051.002",
+ "min_cure_days_after_notice_of_default": 20,
+ "min_notice_of_sale_days_before_sale": 21,
+ "sale_day": "first Tuesday of the month",
+ "sale_window_local_time": "10:00 to 16:00",
+ "notice_of_sale_methods": ["post at courthouse door", "file with county clerk", "certified mail to each debtor"]
+}

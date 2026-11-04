@@ -1,0 +1,8 @@
+period,geography,metric,value,source
+2026-07,United States,properties_with_filings,39906,ATTOM July 2026 foreclosure market report
+2026-07,United States,foreclosure_starts,26648,ATTOM July 2026 foreclosure market report
+2026-07,United States,completed_foreclosures_reo,4764,ATTOM July 2026 foreclosure market report
+2026-07,Texas,foreclosure_starts,3306,ATTOM July 2026 foreclosure market report (most of any state)
+2026-07,Texas,completed_foreclosures_reo,1265,ATTOM July 2026 foreclosure market report (most of any state)
+2026-07,Texas,filing_rate_one_in_housing_units,2653,ATTOM July 2026 foreclosure market report (fifth highest state rate)
+2026-H1,Texas,completed_foreclosures_reo,3322,ATTOM mid-year 2026 report as cited by HousingWire
