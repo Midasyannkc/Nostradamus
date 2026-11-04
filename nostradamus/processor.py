@@ -1,7 +1,7 @@
 """Stream processor: consume the log, update borrower state, publish to the lake, close months, score, alert."""
 import json
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import numpy as np
 
@@ -37,22 +37,19 @@ class Processor:
             reason = contracts.validate(e)
             if reason:
                 dlq.append({"raw": json.dumps(e, default=str), "reason": reason})
-                self.stats["dead_letter"][reason] = self.stats["dead_letter"].get(reason, 0) + 1
+                self._count_dead(reason)
                 continue
-            if e.get("event_id") in self.seen:           # at-least-once delivery: count each event once
+            if e["event_id"] in self.seen:               # at-least-once delivery: count each event once
                 self.stats["duplicates"] += 1
                 continue
-            try:
-                et = np.datetime64(e["event_time"][:19])
-                self.state.apply(e)
-            except Exception:
-                continue
-            ts = __import__("datetime").datetime.fromisoformat(e["event_time"])
-            self.seen[e["event_id"]] = ts
+            ts = datetime.fromisoformat(e["event_time"])
             if self.max_t is None or ts > self.max_t:
                 self.max_t = ts
             if ts < self.max_t - timedelta(days=ALLOWED_LATENESS_DAYS):
+                dlq.append({"raw": json.dumps(e, default=str), "reason": "late_beyond_allowed"})
+                self._count_dead("late_beyond_allowed")
                 continue
+            self.seen[e["event_id"]] = ts
             good.append(e)
         batch_id = uuid.uuid4().hex[:12]
         try:
@@ -60,9 +57,11 @@ class Processor:
         except AuditFailed as err:
             # keep the data, but out of bronze: park the whole batch in the dead-letter table and raise an alarm
             dlq += [{"raw": json.dumps(e, default=str), "reason": "audit_failed"} for e in good]
-            self.stats["dead_letter"]["audit_failed"] = self.stats["dead_letter"].get("audit_failed", 0) + len(good)
+            self._count_dead("audit_failed", len(good))
             self.alarms.add("audit_failed")
             good = []
+        for e in good:                                   # state follows the lake: only published events are applied
+            self.state.apply(e)
         if dlq:
             from .lake import now
             ing = now()
@@ -76,6 +75,9 @@ class Processor:
         self.consumer.commit()
         self.stats["batch_ms"].append((time.perf_counter() - t0) * 1000)
         return len(recs)
+
+    def _count_dead(self, reason, n=1):
+        self.stats["dead_letter"][reason] = self.stats["dead_letter"].get(reason, 0) + n
 
     def _prune_seen(self):
         cutoff = self.max_t - timedelta(days=ALLOWED_LATENESS_DAYS + 5)
