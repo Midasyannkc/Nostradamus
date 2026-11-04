@@ -24,7 +24,7 @@ def run(out: str, seed: int = 11, n: int = 10000, concurrent: bool = True, drift
     if os.path.exists(out):
         shutil.rmtree(out)
     os.makedirs(out)
-    borrowers, stream, truth = simulate.simulate(seed=seed, n=n, drift_from_month=14 if drift else None)
+    borrowers, stream, truth = simulate.simulate(seed=seed, n=n, drift_from_month=16 if drift else None)
     statics = statics_from(borrowers)
     live_from = datetime(*simulate.month_start(TRAIN_MONTHS).timetuple()[:3], tzinfo=timezone.utc)
     hist = [e for a, e in stream if a < live_from]

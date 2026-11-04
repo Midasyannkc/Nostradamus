@@ -12,8 +12,9 @@ import pandas as pd
 from . import refdata
 from .config import MONTHS, START
 
-BASE_OFFSET = -0.3  # shifts overall stress so the synthetic book has enough foreclosures to measure
+BASE_OFFSET = -1.0  # shifts overall stress so the synthetic book has enough foreclosures to measure
 SHOCK_P = .03        # monthly chance of a large financial shock (job loss, medical bill)
+BURN_IN_MONTHS = 8   # silent months before the first event so the training window sees a seasoned book
 CURE_DAYS = 20
 NOTICE_DAYS = 21
 
@@ -40,7 +41,7 @@ def month_start(i: int) -> date:
     return date(y + m0 // 12, m0 % 12 + 1, 1)
 
 
-def simulate(seed: int = 11, n: int = 10000, months: int = MONTHS, drift_from_month: int | None = 14,
+def simulate(seed: int = 11, n: int = 10000, months: int = MONTHS, drift_from_month: int | None = 16,
              drift_share: float = 0.08, dup_rate: float = 0.02, late_rate: float = 0.03, junk_rate: float = 0.001):
     rng = np.random.default_rng(seed)
     zips = refdata.zip_areas()
@@ -59,6 +60,7 @@ def simulate(seed: int = 11, n: int = 10000, months: int = MONTHS, drift_from_mo
                               "dti": dti.round(3), "ltv": ltv.round(3), "household_loans0": hh0, "balance": balance})
 
     s = np.zeros(n)
+    buf = np.clip(1.0 + rng.normal(0, .3, n) - .3 * base, .2, 2.0)   # months of liquidity left
     late_m = np.zeros(n, int)
     status = np.zeros(n, int)      # 0 current, 1 notice of default, 2 notice of sale, 3 sold, 4 cured in cure period
     nod_ts = {}; nos_ts = {}; sale_ts = {}
@@ -77,17 +79,27 @@ def simulate(seed: int = 11, n: int = 10000, months: int = MONTHS, drift_from_mo
         return datetime(m_start.year, m_start.month, 1, tzinfo=timezone.utc) + timedelta(
             days=int(day) - 1, seconds=int(rng_.integers(0, 86000)))
 
-    for t in range(months):
-        ms = month_start(t)
-        s = .75 * s + rng.normal(0, .35, n)
+    def dynamics(active_mask, status_arr):
+        nonlocal s, buf, late_m
+        s = .85 * s + rng.normal(0, .3, n)
         shock = rng.random(n) < SHOCK_P
         s = s + shock * rng.normal(2.2, .6, n)
         d = base + s
-        active = status < 3
-        miss = (rng.random(n) < _sig(1.6 * d - 3.6)) & active & (status != 2)
-        late_prev = late_m.copy()
+        buf = np.clip(buf - (.45 * np.maximum(d, 0) - .2), 0, 2.0)   # stress drains the buffer, calm refills it
+        x = d + 1.2 * (1 - np.minimum(buf, 1.0))                      # strain visible in bank, credit and alt data
+        # the mortgage is paid last: a miss becomes likely only once the buffer is nearly gone
+        miss = (rng.random(n) < _sig(2.5 * (.3 - buf) + .5 * d - 2.2)) & active_mask & (status_arr != 2)
         catch = (~miss) & (late_m > 0) & (rng.random(n) < .6)
         late_m = np.where(miss, late_m + 1, np.where(catch, late_m - 1, late_m))
+        return d, x, miss
+
+    for _ in range(BURN_IN_MONTHS):      # season the book before the first event: stress, buffers and arrears settle
+        dynamics(np.ones(n, bool), status)
+    late_m = np.minimum(late_m, 2)       # the servicer's chain starts at the first simulated month
+
+    for t in range(months):
+        ms = month_start(t)
+        d, x, miss = dynamics(status < 3, status)
         # servicing chain
         start_nod = (late_m >= 3) & (status == 0) & (rng.random(n) < .6)
         for i in np.where(start_nod)[0]:
@@ -131,22 +143,22 @@ def simulate(seed: int = 11, n: int = 10000, months: int = MONTHS, drift_from_mo
                 "amount_paid": 0.0 if missed else round(float(balance[i]) * .0068, 2),
                 "days_past_due": int(late_m[i] * 30)}, "servicer")
         # overdrafts
-        od = rng.poisson(np.exp(-2.4 + .95 * d)) * live
+        od = rng.poisson(np.exp(-2.4 + .95 * x)) * live
         for i in np.where(od > 0)[0]:
             for _ in range(int(od[i])):
                 ev("overdraft", i, at(ms, rng.integers(1, 29), rng),
                    {"account_id": f"A{i:06d}", "amount": round(float(rng.uniform(20, 400)), 2),
                     "balance_after": round(float(-rng.uniform(5, 300)), 2), "fee": 35.0}, "bank")
         # credit snapshot
-        closures = rng.poisson(np.exp(-3.4 + .55 * d)) * live
+        closures = rng.poisson(np.exp(-3.4 + .55 * x)) * live
         closed_hist[t] = closures
         closed12 = closed_hist[max(0, t - 11):t + 1].sum(axis=0)
-        newacc = rng.poisson(np.exp(-1.8 + .35 * d)) * live
-        hh = hh + rng.poisson(np.exp(-3.4 + .35 * d)) * live
-        score = np.clip(score0 - 14 * np.maximum(d, 0) + rng.normal(0, 6, n), 300, 850)
-        util = np.clip(.28 + .16 * d + rng.normal(0, .05, n), 0, 1.3)
-        oth = rng.poisson(np.exp(-3.3 + .9 * d)) * live
-        inq = rng.poisson(np.exp(-.6 + .3 * d)) * live
+        newacc = rng.poisson(np.exp(-1.8 + .35 * x)) * live
+        hh = hh + rng.poisson(np.exp(-3.4 + .35 * x)) * live
+        score = np.clip(score0 - 14 * np.maximum(x, 0) + rng.normal(0, 6, n), 300, 850)
+        util = np.clip(.28 + .16 * x + rng.normal(0, .05, n), 0, 1.3)
+        oth = rng.poisson(np.exp(-3.3 + .9 * x)) * live
+        inq = rng.poisson(np.exp(-.6 + .3 * x)) * live
         for i in np.where(status < 3)[0]:
             ev("credit_snapshot", i, at(ms, rng.integers(2, 28), rng),
                {"score": int(score[i]), "utilization": round(float(util[i]), 3), "accounts_closed_12m": int(closed12[i]),
@@ -154,8 +166,8 @@ def simulate(seed: int = 11, n: int = 10000, months: int = MONTHS, drift_from_mo
                "bureau")
         # alternative data, quarterly
         if t % 3 == 0:
-            liens = liens + rng.poisson(np.exp(-3.6 + .6 * d)) * live
-            over = np.clip(48 + 11 * d + rng.normal(0, 6, n), 0, 100)
+            liens = liens + rng.poisson(np.exp(-3.6 + .6 * x)) * live
+            over = np.clip(48 + 11 * x + rng.normal(0, 6, n), 0, 100)
             for i in np.where(status < 3)[0]:
                 ev("alt_signal", i, at(ms, rng.integers(3, 27), rng),
                    {"overspend_index": round(float(over[i]), 1), "household_loan_count": int(hh[i]),

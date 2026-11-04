@@ -1,0 +1,136 @@
+{
+ "events_streamed": 497994,
+ "borrowers": 10000,
+ "model": {
+  "live_notices_of_sale": 211,
+  "caught_before_notice": 190,
+  "recall": 0.9005,
+  "alerted_borrowers": 607,
+  "alerts": 890,
+  "mature_alerted_borrowers": 480,
+  "hits_within_horizon": 144,
+  "precision": 0.3,
+  "median_lead_days": 42.5,
+  "p25_lead_days": 26.5,
+  "lead_days_30_plus": 130
+ },
+ "baseline_dpd60": {
+  "live_notices_of_sale": 211,
+  "caught_before_notice": 207,
+  "recall": 0.981,
+  "alerted_borrowers": 844,
+  "alerts": 1519,
+  "mature_alerted_borrowers": 663,
+  "hits_within_horizon": 150,
+  "precision": 0.2262,
+  "median_lead_days": 43.5,
+  "p25_lead_days": 32.5,
+  "lead_days_30_plus": 163
+ },
+ "equal_workload": {
+  "model": {
+   "live_notices_of_sale": 211,
+   "caught_before_notice": 201,
+   "recall": 0.9526,
+   "alerted_borrowers": 844,
+   "alerts": 1543,
+   "mature_alerted_borrowers": 666,
+   "hits_within_horizon": 147,
+   "precision": 0.2207,
+   "median_lead_days": 50.5,
+   "p25_lead_days": 33.5,
+   "lead_days_30_plus": 158
+  },
+  "rule_dpd60": {
+   "live_notices_of_sale": 211,
+   "caught_before_notice": 207,
+   "recall": 0.981,
+   "alerted_borrowers": 844,
+   "alerts": 1519,
+   "mature_alerted_borrowers": 663,
+   "hits_within_horizon": 150,
+   "precision": 0.2262,
+   "median_lead_days": 43.5,
+   "p25_lead_days": 32.5,
+   "lead_days_30_plus": 163
+  },
+  "threshold": 0.9195,
+  "earlier": {
+   "both_flagged": 201,
+   "model_earlier": 39,
+   "median_days_earlier": 0.0,
+   "model_only_catches": 0
+  }
+ },
+ "dead_letter": {
+  "missing_envelope:event_time": 262,
+  "invalid:borrower_id": 284,
+  "late_beyond_allowed": 116,
+  "missing_payload:days_past_due": 4666
+ },
+ "duplicates_removed": 9713,
+ "replayed_from_dead_letter": 4581,
+ "bronze_events": 487534,
+ "alarms": [
+  "contract_drift"
+ ],
+ "stream": {
+  "events": 497994,
+  "published": 482953,
+  "batches": 102,
+  "p50_batch_ms": 235.2,
+  "p95_batch_ms": 495.4
+ },
+ "train_rows": 89323,
+ "train_positives": 496,
+ "no_drift_reference": {
+  "model": {
+   "live_notices_of_sale": 213,
+   "caught_before_notice": 193,
+   "recall": 0.9061,
+   "alerted_borrowers": 620,
+   "alerts": 923,
+   "mature_alerted_borrowers": 482,
+   "hits_within_horizon": 143,
+   "precision": 0.2967,
+   "median_lead_days": 42.5,
+   "p25_lead_days": 26.5,
+   "lead_days_30_plus": 134
+  },
+  "equal_workload": {
+   "model": {
+    "live_notices_of_sale": 213,
+    "caught_before_notice": 203,
+    "recall": 0.9531,
+    "alerted_borrowers": 863,
+    "alerts": 1628,
+    "mature_alerted_borrowers": 678,
+    "hits_within_horizon": 147,
+    "precision": 0.2168,
+    "median_lead_days": 50.5,
+    "p25_lead_days": 33.5,
+    "lead_days_30_plus": 161
+   },
+   "rule_dpd60": {
+    "live_notices_of_sale": 213,
+    "caught_before_notice": 209,
+    "recall": 0.9812,
+    "alerted_borrowers": 863,
+    "alerts": 1598,
+    "mature_alerted_borrowers": 675,
+    "hits_within_horizon": 150,
+    "precision": 0.2222,
+    "median_lead_days": 43.5,
+    "p25_lead_days": 33.5,
+    "lead_days_30_plus": 169
+   },
+   "threshold": 0.9197,
+   "earlier": {
+    "both_flagged": 203,
+    "model_earlier": 39,
+    "median_days_earlier": 0.0,
+    "model_only_catches": 0
+   }
+  }
+ }
+}
