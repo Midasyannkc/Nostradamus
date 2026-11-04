@@ -101,8 +101,8 @@ def simulate(seed: int = 11, n: int = 10000, months: int = MONTHS, drift_from_mo
                 ev("servicing_status", i, nod + timedelta(days=int(rng.integers(5, 19))), {"status": "CURE"}, "servicer")
                 ev("servicing_status", i, nod, {"status": "NOD"}, "servicer")
                 continue
-            nos_d = nod_d + timedelta(days=CURE_DAYS + int(rng.integers(0, 10)))
-            sale_d = first_tuesday_on_or_after(nos_d + timedelta(days=NOTICE_DAYS))
+            nos_d = nod_d + timedelta(days=CURE_DAYS + 1 + int(rng.integers(0, 10)))  # a full cure period at timestamp level
+            sale_d = first_tuesday_on_or_after(nos_d + timedelta(days=NOTICE_DAYS + 1))
             status[i] = 1
             nod_ts[bid[i]] = nod
             nos_ts[bid[i]] = datetime(nos_d.year, nos_d.month, nos_d.day, 12, tzinfo=timezone.utc)
