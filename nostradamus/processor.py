@@ -25,6 +25,7 @@ class Processor:
         self.stats = {"batches": 0, "events": 0, "published": 0, "duplicates": 0, "dead_letter": {}, "batch_ms": []}
         self.alarms = set()
         self.last_alert = {}
+        self.scored = []      # (borrower, month, score, days past due, alert time) for every scored borrower-month
 
     def run_batch(self) -> int:
         recs = self.consumer.poll()
@@ -81,6 +82,23 @@ class Processor:
         self.stats["batch_ms"].append((time.perf_counter() - t0) * 1000)
         return len(recs)
 
+    def replay_dead_letter(self, prefix: str = "missing_payload:") -> int:
+        """Reprocess quarantined events whose contract problem has been resolved (for example a confirmed field alias).
+        Replays bypass the lateness rule, are deduplicated by event id and go through the same write-audit-publish."""
+        ready = []
+        for r in self.lake.rows("bronze.dead_letter"):
+            if not r["reason"].startswith(prefix):
+                continue
+            e = contracts.normalize(json.loads(r["raw"]))
+            if contracts.validate(e) is None and e["event_id"] not in self.seen:
+                self.seen[e["event_id"]] = datetime.fromisoformat(e["event_time"])
+                ready.append(e)
+        self._replays = getattr(self, "_replays", 0) + 1
+        self.lake.publish(f"replay-{self._replays}", ready)
+        for e in ready:
+            self.state.apply(e)
+        return len(ready)
+
     def _count_dead(self, reason, n=1):
         self.stats["dead_letter"][reason] = self.stats["dead_letter"].get(reason, 0) + n
 
@@ -110,6 +128,7 @@ class Processor:
         score = self.model.predict(X)
         when = month_end_ts(M) + timedelta(days=GRACE_DAYS)
         for i, b in enumerate(keys):
+            self.scored.append((b, M, float(score[i]), float(X[i][0]), when))
             if X[i][0] >= 60:
                 self.baseline.append({"borrower_id": b, "as_of_month": M, "alert_time": when})
             prev = self.last_alert.get(b)

@@ -74,11 +74,18 @@ def run(out: str, seed: int = 11, n: int = 10000, concurrent: bool = True, drift
     if th:
         th.join()
     proc.alerts_out.close()
+    replayed = proc.replay_dead_letter() if drift else 0
     lake.append("gold.alerts", [{**a, "reasons": json.dumps(a["reasons"])} for a in proc.alerts])
     k = kpis.evaluate(proc.alerts, state, TRAIN_MONTHS)
     kb = kpis.evaluate(proc.baseline, state, TRAIN_MONTHS)
+    rule = kpis.operating_point(proc.scored, state, TRAIN_MONTHS, baseline_dpd=60)
+    thr_eq, matched = kpis.matched_workload(proc.scored, state, TRAIN_MONTHS, rule["alerted_borrowers"])
+    earlier = kpis.earlier_than_rule(matched.pop("first_alert"), rule.pop("first_alert"), state, TRAIN_MONTHS)
     ms = np.array(proc.stats["batch_ms"])
-    report = {"events_streamed": len(stream), "borrowers": n, "model": k, "baseline_dpd60": kb,
+    report = {"events_streamed": len(stream), "borrowers": n, "model": k, "baseline_dpd60": kb, "equal_workload": {"model": matched, "rule_dpd60": rule,
+              "threshold": round(thr_eq, 4), "earlier": earlier}, "dead_letter": proc.stats["dead_letter"],
+              "duplicates_removed": proc.stats["duplicates"], "replayed_from_dead_letter": replayed,
+              "bronze_events": lake.count("bronze.events"), "alarms": sorted(proc.alarms),
               "stream": {"events": proc.stats["events"], "published": proc.stats["published"], "batches": proc.stats["batches"],
                          "p50_batch_ms": round(float(np.percentile(ms, 50)), 1), "p95_batch_ms": round(float(np.percentile(ms, 95)), 1)},
               "train_rows": int(len(y)), "train_positives": int(y.sum())}
@@ -86,5 +93,14 @@ def run(out: str, seed: int = 11, n: int = 10000, concurrent: bool = True, drift
     return report
 
 
+def run_all(base: str) -> dict:
+    """The headline run with upstream schema drift, and a reference run without it to price the drift."""
+    main = run(os.path.join(base, "run"), drift=True)
+    ref = run(os.path.join(base, "run_no_drift"), drift=False)
+    main["no_drift_reference"] = {"model": ref["model"], "equal_workload": ref["equal_workload"]}
+    json.dump(main, open(os.path.join(base, "report.json"), "w"), indent=1, default=str)
+    return main
+
+
 if __name__ == "__main__":
-    print(json.dumps(run(os.path.join(ROOT, "out", "run")), indent=1, default=str))
+    print(json.dumps(run_all(os.path.join(ROOT, "out")), indent=1, default=str))

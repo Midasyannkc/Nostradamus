@@ -33,3 +33,16 @@ def validate(e: dict) -> str | None:
         if f not in e["payload"]:
             return f"missing_payload:{f}"
     return None
+
+
+# Field renames that an upstream owner has confirmed. Registering one lets a quarantined event be replayed.
+ALIASES = {"payment": {"dpd": "days_past_due"}}
+
+
+def normalize(e: dict) -> dict:
+    """Apply confirmed field aliases to a copy of the event."""
+    amap = ALIASES.get(e.get("event_type"), {})
+    if not amap or not isinstance(e.get("payload"), dict):
+        return e
+    p = {amap.get(k, k): v for k, v in e["payload"].items()}
+    return {**e, "payload": p}
