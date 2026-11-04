@@ -52,6 +52,7 @@ class Processor:
         self.stats["events"] += len(recs)
         self.stats["batches"] += 1
         self._close_months()
+        self.consumer.commit()
         self.stats["batch_ms"].append((time.perf_counter() - t0) * 1000)
         return len(recs)
 

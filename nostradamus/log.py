@@ -67,6 +67,7 @@ class Consumer:
         self.log, self.topic, self.group = log, topic, group
         self.dir = os.path.join(log.root, "_offsets", group)
         os.makedirs(self.dir, exist_ok=True)
+        self._pos = {}   # read position in memory; only commit() makes it durable
 
     def _state(self, p):
         f = os.path.join(self.dir, f"{self.topic}-{p}.json")
@@ -85,7 +86,7 @@ class Consumer:
             path = self.log.path(self.topic, p)
             if not os.path.exists(path):
                 continue
-            st = self._state(p)
+            st = self._pos.get(p) or self._state(p)
             with open(path, "rb") as fh:
                 fh.seek(st["pos"])
                 n = 0
@@ -97,5 +98,10 @@ class Consumer:
                     out.append(Record(p, d["o"], d["ts"], d["k"], d["v"]))
                     st = {"offset": d["o"] + 1, "pos": fh.tell()}
                     n += 1
-            self._save(p, st)                           # auto commit on poll
+            self._pos[p] = st
         return out
+
+    def commit(self):
+        """Make the current read positions durable. Call only after the polled records are fully processed."""
+        for p, st in self._pos.items():
+            self._save(p, st)
