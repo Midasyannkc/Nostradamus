@@ -1,0 +1,39 @@
+{
+ "events_streamed": 497994,
+ "borrowers": 10000,
+ "model": {
+  "live_notices_of_sale": 212,
+  "caught_before_notice": 172,
+  "recall": 0.8113,
+  "alerted_borrowers": 610,
+  "alerts": 895,
+  "mature_alerted_borrowers": 475,
+  "hits_within_horizon": 129,
+  "precision": 0.2716,
+  "median_lead_days": 39.5,
+  "p25_lead_days": 17.2,
+  "lead_days_30_plus": 103
+ },
+ "baseline_dpd60": {
+  "live_notices_of_sale": 212,
+  "caught_before_notice": 207,
+  "recall": 0.9764,
+  "alerted_borrowers": 823,
+  "alerts": 1522,
+  "mature_alerted_borrowers": 649,
+  "hits_within_horizon": 151,
+  "precision": 0.2327,
+  "median_lead_days": 43.5,
+  "p25_lead_days": 32.5,
+  "lead_days_30_plus": 162
+ },
+ "stream": {
+  "events": 497994,
+  "published": 497616,
+  "batches": 102,
+  "p50_batch_ms": 103.6,
+  "p95_batch_ms": 310.3
+ },
+ "train_rows": 89348,
+ "train_positives": 496
+}

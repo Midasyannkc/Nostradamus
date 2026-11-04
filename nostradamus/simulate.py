@@ -13,7 +13,7 @@ from . import refdata
 from .config import MONTHS, START
 
 BASE_OFFSET = -0.3  # shifts overall stress so the synthetic book has enough foreclosures to measure
-SHOCK_P = .02        # monthly chance of a large financial shock (job loss, medical bill)
+SHOCK_P = .03        # monthly chance of a large financial shock (job loss, medical bill)
 CURE_DAYS = 20
 NOTICE_DAYS = 21
 
