@@ -9,3 +9,27 @@ PAYLOAD = {
                    "address_changes_12m"),
     "servicing_status": ("status",),
 }
+
+
+def validate(e: dict) -> str | None:
+    """Return None when the event satisfies the contract, otherwise a short reason."""
+    from datetime import datetime
+    if not isinstance(e, dict):
+        return "not_an_object"
+    for f in ENVELOPE:
+        if f not in e:
+            return f"missing_envelope:{f}"
+    if not e["borrower_id"] or not isinstance(e["borrower_id"], str):
+        return "invalid:borrower_id"
+    if e["event_type"] not in PAYLOAD:
+        return f"unknown_event_type:{e['event_type']}"
+    try:
+        datetime.fromisoformat(e["event_time"])
+    except Exception:
+        return "invalid:event_time"
+    if not isinstance(e["payload"], dict):
+        return "invalid:payload"
+    for f in PAYLOAD[e["event_type"]]:
+        if f not in e["payload"]:
+            return f"missing_payload:{f}"
+    return None

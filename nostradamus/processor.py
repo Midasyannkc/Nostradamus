@@ -5,6 +5,7 @@ from datetime import timedelta
 
 import numpy as np
 
+from . import contracts
 from .config import ALLOWED_LATENESS_DAYS
 from .model import month_end_ts
 from .state import FEATURES, features, month_of
@@ -20,7 +21,8 @@ class Processor:
         self.next_close = 0
         self.alerts, self.baseline = [], []
         self.seen = {}
-        self.stats = {"batches": 0, "events": 0, "published": 0, "duplicates": 0, "batch_ms": []}
+        self.stats = {"batches": 0, "events": 0, "published": 0, "duplicates": 0, "dead_letter": {}, "batch_ms": []}
+        self.alarms = set()
 
     def run_batch(self) -> int:
         recs = self.consumer.poll()
@@ -28,9 +30,14 @@ class Processor:
             return 0
         import time
         t0 = time.perf_counter()
-        good = []
+        good, dlq = [], []
         for r in recs:
             e = r.value
+            reason = contracts.validate(e)
+            if reason:
+                dlq.append({"raw": json.dumps(e, default=str), "reason": reason})
+                self.stats["dead_letter"][reason] = self.stats["dead_letter"].get(reason, 0) + 1
+                continue
             if e.get("event_id") in self.seen:           # at-least-once delivery: count each event once
                 self.stats["duplicates"] += 1
                 continue
@@ -48,6 +55,12 @@ class Processor:
             good.append(e)
         batch_id = uuid.uuid4().hex[:12]
         self.lake.publish(batch_id, good)
+        if dlq:
+            from .lake import now
+            ing = now()
+            self.lake.append("bronze.dead_letter", [{**d, "batch_id": batch_id, "ingested_at": ing} for d in dlq])
+            if len(recs) >= 50 and len(dlq) / len(recs) >= .02:
+                self.alarms.add("contract_drift")
         self.stats["published"] += len(good)
         self.stats["events"] += len(recs)
         self.stats["batches"] += 1
