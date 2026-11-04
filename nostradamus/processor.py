@@ -19,7 +19,8 @@ class Processor:
         self.max_t = None
         self.next_close = 0
         self.alerts, self.baseline = [], []
-        self.stats = {"batches": 0, "events": 0, "published": 0, "batch_ms": []}
+        self.seen = {}
+        self.stats = {"batches": 0, "events": 0, "published": 0, "duplicates": 0, "batch_ms": []}
 
     def run_batch(self) -> int:
         recs = self.consumer.poll()
@@ -30,12 +31,16 @@ class Processor:
         good = []
         for r in recs:
             e = r.value
+            if e.get("event_id") in self.seen:           # at-least-once delivery: count each event once
+                self.stats["duplicates"] += 1
+                continue
             try:
                 et = np.datetime64(e["event_time"][:19])
                 self.state.apply(e)
             except Exception:
                 continue
             ts = __import__("datetime").datetime.fromisoformat(e["event_time"])
+            self.seen[e["event_id"]] = ts
             if self.max_t is None or ts > self.max_t:
                 self.max_t = ts
             if ts < self.max_t - timedelta(days=ALLOWED_LATENESS_DAYS):
@@ -50,7 +55,13 @@ class Processor:
         self.stats["batch_ms"].append((time.perf_counter() - t0) * 1000)
         return len(recs)
 
+    def _prune_seen(self):
+        cutoff = self.max_t - timedelta(days=ALLOWED_LATENESS_DAYS + 5)
+        if len(self.seen) > 400_000:
+            self.seen = {k: v for k, v in self.seen.items() if v >= cutoff}
+
     def _close_months(self):
+        self._prune_seen()
         while self.max_t is not None and month_end_ts(self.next_close) + timedelta(days=GRACE_DAYS) <= self.max_t:
             self._close_month(self.next_close)
             self.next_close += 1
