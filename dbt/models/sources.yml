@@ -1,0 +1,17 @@
+version: 2
+sources:
+  - name: bronze
+    description: Published Iceberg snapshots loaded into the warehouse (DuckDB here, Snowflake as the documented target).
+    tables:
+      - name: events
+      - name: dead_letter
+      - name: alerts
+  - name: ref
+    description: Reference tables. Dallas County notice files and ATTOM figures are real; borrowers are synthetic.
+    tables:
+      - name: borrowers
+      - name: zip_areas
+      - name: dallas_notice_files
+      - name: attom_texas
+      - name: python_overdrafts
+      - name: python_kpis

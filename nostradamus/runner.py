@@ -89,6 +89,10 @@ def run(out: str, seed: int = 11, n: int = 10000, concurrent: bool = True, drift
               "stream": {"events": proc.stats["events"], "published": proc.stats["published"], "batches": proc.stats["batches"],
                          "p50_batch_ms": round(float(np.percentile(ms, 50)), 1), "p95_batch_ms": round(float(np.percentile(ms, 95)), 1)},
               "train_rows": int(len(y)), "train_positives": int(y.sum())}
+    import pandas as pd
+    borrowers.to_parquet(os.path.join(out, "borrowers.parquet"))
+    od = [(b, m, c, a) for b, st in state.b.items() if b in statics for m, (c, a) in st["od"].items()]
+    pd.DataFrame(od, columns=["borrower_id", "month_idx", "overdrafts", "overdraft_amount"]).to_parquet(os.path.join(out, "python_overdrafts.parquet"))
     json.dump(report, open(os.path.join(out, "report.json"), "w"), indent=1, default=str)
     return report
 

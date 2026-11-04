@@ -1,0 +1,40 @@
+version: 2
+models:
+  - name: stg_payments
+    columns:
+      - name: event_id
+        tests: [unique, not_null]
+      - name: days_past_due
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360]
+  - name: stg_overdrafts
+    columns:
+      - name: event_id
+        tests: [unique, not_null]
+  - name: stg_servicing
+    columns:
+      - name: status
+        tests:
+          - accepted_values:
+              values: [NOD, NOS, SALE, CURE]
+  - name: stg_alerts
+    columns:
+      - name: alert_id
+        tests: [unique, not_null]
+      - name: borrower_id
+        tests:
+          - relationships:
+              to: ref('dim_borrower')
+              field: borrower_id
+  - name: dim_borrower
+    columns:
+      - name: borrower_id
+        tests: [unique, not_null]
+      - name: city
+        tests: [not_null]
+  - name: fct_alert_outcomes
+    columns:
+      - name: borrower_id
+        tests: [unique, not_null]

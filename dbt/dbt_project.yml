@@ -1,0 +1,19 @@
+name: nostradamus
+version: "1.0.0"
+config-version: 2
+profile: nostradamus
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+vars:
+  horizon_days: 180
+  live_start: "2026-01-01 00:00:00+00"
+  data_end: "2026-11-01 00:00:00+00"
+models:
+  nostradamus:
+    silver:
+      +schema: silver
+      +materialized: table
+    gold:
+      +schema: gold
+      +materialized: table

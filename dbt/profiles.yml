@@ -1,0 +1,8 @@
+nostradamus:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('NOSTRADAMUS_DB') }}"
+      schema: main
+      threads: 1
