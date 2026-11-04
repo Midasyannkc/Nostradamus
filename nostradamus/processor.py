@@ -7,6 +7,7 @@ import numpy as np
 
 from . import contracts
 from .config import ALLOWED_LATENESS_DAYS
+from .lake import AuditFailed
 from .model import month_end_ts
 from .state import FEATURES, features, month_of
 
@@ -54,7 +55,14 @@ class Processor:
                 continue
             good.append(e)
         batch_id = uuid.uuid4().hex[:12]
-        self.lake.publish(batch_id, good)
+        try:
+            self.lake.publish(batch_id, good)
+        except AuditFailed as err:
+            # keep the data, but out of bronze: park the whole batch in the dead-letter table and raise an alarm
+            dlq += [{"raw": json.dumps(e, default=str), "reason": "audit_failed"} for e in good]
+            self.stats["dead_letter"]["audit_failed"] = self.stats["dead_letter"].get("audit_failed", 0) + len(good)
+            self.alarms.add("audit_failed")
+            good = []
         if dlq:
             from .lake import now
             ing = now()
