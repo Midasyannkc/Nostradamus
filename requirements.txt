@@ -1,0 +1,13 @@
+numpy
+pandas
+scikit-learn
+pyarrow
+pyiceberg[sql-sqlite]
+duckdb
+dbt-core
+dbt-duckdb
+dbt-metricflow
+apache-airflow
+pyyaml
+pytest
+python-pptx
