@@ -56,7 +56,7 @@ FEATURES = ["dpd_now", "max_dpd_3m", "late_months_6m", "overdrafts_30d", "overdr
 
 
 def _latest(d: dict, M: int):
-    ks = [k for k in d]                      # latest bucket we have
+    ks = [k for k in d if k <= M]            # only what was known by the end of month M
     return d[max(ks)] if ks else None
 
 
