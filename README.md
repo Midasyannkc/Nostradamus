@@ -2,6 +2,8 @@
 
 A streaming pipeline that flags Dallas County, Plano and Frisco mortgage borrowers who are likely to reach a foreclosure sale notice within 180 days, so a servicer can offer hardship help early. Built to practice the stack in the DataExpert.io Senior AI Analytics Engineer curriculum: stream processing, Iceberg write-audit-publish, dbt, a MetricFlow semantic layer, Airflow dynamic task mapping, and Snowflake Dynamic Tables as a design.
 
+**Executive summary deck:** [Nostradamus_Executive_Summary.pptx](Nostradamus_Executive_Summary.pptx) (7 slides: goal, one-page end-to-end pipeline, data and events, fixes, results, conclusion with KPIs).
+
 ## Honest scope
 
 * Borrower, loan, bank, credit and alternative-data events are **synthetic**. No LexisNexis, bureau, bank or servicer data is used. See `data/SOURCE.md` for what is real (Texas Property Code 51.002 timing, Dallas County notice file counts, ATTOM Texas figures) and what is not.
