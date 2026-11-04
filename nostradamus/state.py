@@ -52,7 +52,7 @@ class State:
 FEATURES = ["dpd_now", "max_dpd_3m", "late_months_6m", "overdrafts_30d", "overdrafts_90d", "overdraft_amt_90d",
             "score_now", "score_delta_3m", "utilization_now", "util_delta_3m", "accounts_closed_12m", "new_accounts_90d",
             "inquiries_90d", "other_late_90d", "overspend_index", "household_loans", "household_monthly_debt",
-            "liens_judgments", "ltv", "dti", "area_risk"]
+            "liens_judgments", "ltv", "dti"]
 
 
 def _latest(d: dict, M: int):
@@ -72,4 +72,4 @@ def features(st: dict, M: int, static: dict) -> list:
     oth = sum(cr[m][5] for m in range(M - 2, M + 1) if m in cr)
     return [p[0], max(dpds) if dpds else 0, late6, od.get(M, (0, 0.0))[0], sum(x[0] for x in od90), sum(x[1] for x in od90),
             c[0], c[0] - c3[0], c[1], c[1] - c3[1], c[2], c[3], c[4], oth, a[0], a[1], a[2], a[3],
-            static["ltv"], static["dti"], static.get("area_risk", 0.0)]
+            static["ltv"], static["dti"]]

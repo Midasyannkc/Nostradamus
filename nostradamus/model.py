@@ -8,7 +8,7 @@ from .state import FEATURES, features, month_of
 RISK_UP = ["dpd_now", "max_dpd_3m", "late_months_6m", "overdrafts_30d", "overdrafts_90d", "overdraft_amt_90d",
            "utilization_now", "util_delta_3m", "accounts_closed_12m", "new_accounts_90d", "inquiries_90d",
            "other_late_90d", "overspend_index", "household_loans", "household_monthly_debt", "liens_judgments", "ltv",
-           "dti", "area_risk"]
+           "dti"]
 RISK_DOWN = ["score_now", "score_delta_3m"]
 
 

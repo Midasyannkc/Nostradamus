@@ -20,16 +20,6 @@ def statics_from(borrowers):
     return {r.borrower_id: {"ltv": float(r.ltv), "dti": float(r.dti)} for r in borrowers.itertuples()}
 
 
-def area_risk(state, borrowers):
-    z = dict(zip(borrowers.borrower_id, borrowers.zip))
-    hit, tot = {}, {}
-    for b, zc in z.items():
-        tot[zc] = tot.get(zc, 0) + 1
-        if state.b[b]["nos"]:
-            hit[zc] = hit.get(zc, 0) + 1
-    return {b: hit.get(zc, 0) / tot[zc] for b, zc in z.items()}
-
-
 def run(out: str, seed: int = 11, n: int = 10000, concurrent: bool = True, drift: bool = True) -> dict:
     if os.path.exists(out):
         shutil.rmtree(out)
@@ -49,9 +39,6 @@ def run(out: str, seed: int = 11, n: int = 10000, concurrent: bool = True, drift
     proc = Processor(Consumer(log, "events", "nostradamus"), state, statics, lake)
     while proc.run_batch():
         pass
-    risk = area_risk(state, borrowers)
-    for b in statics:
-        statics[b]["area_risk"] = risk[b]
     X, y, meta = M.build_training(state, statics, range(0, TRAIN_MONTHS - 3))
     Xv, yv, _ = M.build_training(state, statics, range(TRAIN_MONTHS - 3, TRAIN_MONTHS))
     model = M.Model().fit(X, y)
